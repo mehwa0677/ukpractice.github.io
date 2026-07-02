@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 VR Viewer</title>
+    <title>360 VR Viewer (with Controls)</title>
     
     <!-- Pannellum CSS & JS 라이브러리 로드 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
@@ -26,7 +26,7 @@
             height: 100vh;
         }
 
-        /* 불필요한 기본 UI 숨기기 (전체화면 아이콘, 정보 아이콘 등) */
+        /* 불필요한 기본 UI 숨기기 */
         .pnlm-fullscreen-toggle-button, 
         .pnlm-about-msg {
             display: none !important;
@@ -41,6 +41,45 @@
             left: auto !important;
             margin: 0 !important;
         }
+
+        /* 줌 버튼 스타일 강화 (가시성 확보) */
+        .pnlm-zoom-in, .pnlm-zoom-out {
+            background-color: rgba(0, 0, 0, 0.7) !important;
+            border: 1px solid #fff !important;
+            border-radius: 4px !important;
+            color: #fff !important;
+            font-size: 18px !important;
+            margin-bottom: 10px !important;
+        }
+        .pnlm-zoom-in:hover, .pnlm-zoom-out:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* [신규] 자동 회전 버튼 스타일 */
+        #auto-rotate-toggle {
+            position: absolute;
+            bottom: 110px; /* 줌 버튼 위에 배치 */
+            right: 30px;
+            width: 38px;
+            height: 38px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid #fff;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 20px;
+            text-align: center;
+            line-height: 36px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 100; /* Pannellum UI보다 위에 배치 */
+        }
+        #auto-rotate-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        /* 회전 중일 때의 아이콘 (예: 일시정지) */
+        #auto-rotate-toggle.rotating {
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -48,17 +87,34 @@
 <!-- 뷰어가 렌더링될 영역 -->
 <div id="panorama"></div>
 
+<!-- [신규] 자동 회전 토글 버튼 -->
+<div id="auto-rotate-toggle" title="자동 회전">&#x21bb;</div> <!-- 둥근 화살표 아이콘 -->
+
 <script>
     // Pannellum 뷰어 초기화
-    pannellum.viewer('panorama', {
+    var viewer = pannellum.viewer('panorama', {
         "type": "equirectangular", // 360도 이미지 타입 지정
         "panorama": "vr.jpg",      // 사용할 이미지 파일명 지정
         "autoLoad": true,          // 페이지 로드 시 자동 실행
-        "mouseZoom": true,         // 마우스 스크롤로 확대/축소 허용
-        "showControls": true,      // 줌 컨트롤 아이콘 표시
+        "mouseZoom": true,         // 마우스 스크롤로 확대/축소 허용 (기존 유지)
+        "showControls": true,      // 줌 컨트롤 아이콘 표시 (기존 유지)
         "compass": false,          // 나침반 UI 숨기기
         "minPitch": -90,           // 상하 회전 최소 각도
         "maxPitch": 90             // 상하 회전 최대 각도
+    });
+
+    // [신규] 자동 회전 토글 기능 구현
+    var autoRotateBtn = document.getElementById('auto-rotate-toggle');
+    autoRotateBtn.addEventListener('click', function() {
+        if (viewer.isAutorotating()) {
+            viewer.stopAutorotate();
+            autoRotateBtn.innerHTML = '&#x21bb;'; // 둥근 화살표 아이콘 (시작)
+            autoRotateBtn.classList.remove('rotating');
+        } else {
+            viewer.startAutorotate(-2); // 반시계 방향으로 회전 시작
+            autoRotateBtn.innerHTML = '||'; // 일시정지 아이콘 (정지)
+            autoRotateBtn.classList.add('rotating');
+        }
     });
 </script>
 
