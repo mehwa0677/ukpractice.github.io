@@ -3,120 +3,577 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 VR Viewer (with Controls)</title>
-    
-    <!-- Pannellum CSS & JS 라이브러리 로드 -->
+    <title>360 VR Viewer</title>
+
+    <!-- Pannellum CSS & JS 라이브러리 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-    
+
     <style>
-        /* 기본 여백 제거 및 화면 꽉 차게 설정 */
-        body, html {
+        /* ================================
+           기본 화면 설정
+        ================================= */
+        html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
             background-color: #000;
+            font-family: Arial, sans-serif;
         }
-        
-        /* 파노라마 뷰어 컨테이너 설정 */
+
         #panorama {
             width: 100vw;
             height: 100vh;
         }
 
-        /* 불필요한 기본 UI 숨기기 */
-        .pnlm-fullscreen-toggle-button, 
-        .pnlm-about-msg {
+        /* Pannellum 기본 UI 숨기기 */
+        .pnlm-fullscreen-toggle-button,
+        .pnlm-about-msg,
+        .pnlm-zoom-controls,
+        .pnlm-compass {
             display: none !important;
         }
 
-        /* 확대/축소 컨트롤 버튼 위치 (우측 하단으로 이동) */
-        .pnlm-zoom-controls {
-            position: absolute !important;
-            top: auto !important;
-            bottom: 30px !important;
-            right: 30px !important;
-            left: auto !important;
-            margin: 0 !important;
-        }
-
-        /* 줌 버튼 스타일 강화 (가시성 확보) */
-        .pnlm-zoom-in, .pnlm-zoom-out {
-            background-color: rgba(0, 0, 0, 0.7) !important;
-            border: 1px solid #fff !important;
-            border-radius: 4px !important;
-            color: #fff !important;
-            font-size: 18px !important;
-            margin-bottom: 10px !important;
-        }
-        .pnlm-zoom-in:hover, .pnlm-zoom-out:hover {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-        }
-
-        /* [신규] 자동 회전 버튼 스타일 */
-        #auto-rotate-toggle {
+        /* ================================
+           확대 / 축소 컨트롤
+        ================================= */
+        #zoom-control {
             position: absolute;
-            bottom: 110px; /* 줌 버튼 위에 배치 */
-            right: 30px;
+            right: 24px;
+            bottom: 30px;
+            width: 44px;
+            height: 205px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 34px;
+            border: none;
+            background: transparent;
+            color: #111;
+            font-size: 24px;
+            line-height: 32px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(0,0,0,0.08);
+        }
+
+        #zoom-slider-area {
+            width: 130px;
+            height: 34px;
+            transform: rotate(-90deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #zoom-slider {
+            width: 125px;
+            cursor: pointer;
+            accent-color: #267bff;
+        }
+
+        /* ================================
+           나침반 UI
+        ================================= */
+        #compass {
+            position: absolute;
+            right: 24px;
+            top: 24px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255,255,255,0.35);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            z-index: 100;
+        }
+
+        #compass-ring {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 72px;
+            height: 72px;
+            transform: translate(-50%, -50%) rotate(0deg);
+            transform-origin: center center;
+            transition: transform 0.08s linear;
+        }
+
+        .direction {
+            position: absolute;
+            color: #fff;
+            font-size: 11px;
+            font-weight: bold;
+            opacity: 0.95;
+        }
+
+        .north {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff5252;
+        }
+
+        .south {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .west {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .east {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #compass-needle {
+            position: absolute;
+            left: 50%;
+            top: 50%;
             width: 38px;
             height: 38px;
-            background-color: rgba(0, 0, 0, 0.7);
-            border: 1px solid #fff;
-            border-radius: 4px;
+            transform: translate(-50%, -50%);
+        }
+
+        #compass-needle::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 1px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 22px solid #e53935;
+        }
+
+        #compass-needle::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: 1px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 22px solid #bdbdbd;
+        }
+
+        #compass-center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+
+        /* ================================
+           화면 중앙 위치 안내 표시
+        ================================= */
+        #center-guide {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 92px;
+            height: 92px;
+            transform: translate(-50%, -50%);
+            z-index: 90;
+            pointer-events: none;
+        }
+
+        .guide-line-horizontal {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 90px;
+            height: 1px;
+            background: rgba(255,255,255,0.55);
+            transform: translate(-50%, -50%);
+        }
+
+        .guide-line-vertical {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 1px;
+            height: 90px;
+            background: rgba(255,255,255,0.55);
+            transform: translate(-50%, -50%);
+        }
+
+        .guide-circle {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 56px;
+            height: 56px;
+            border: 2px solid rgba(255,255,255,0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 12px rgba(0,0,0,0.5);
+        }
+
+        .guide-dot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 7px;
+            height: 7px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #view-info {
+            position: absolute;
+            left: 50%;
+            top: calc(50% + 58px);
+            transform: translateX(-50%);
+            padding: 7px 14px;
+            background: rgba(0,0,0,0.58);
             color: #fff;
-            font-size: 20px;
+            font-size: 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+            z-index: 90;
+            pointer-events: none;
+            letter-spacing: -0.2px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        }
+
+        /* ================================
+           자동 회전 버튼
+        ================================= */
+        #auto-rotate-toggle {
+            position: absolute;
+            right: 24px;
+            bottom: 248px;
+            width: 44px;
+            height: 44px;
+            background-color: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 23px;
             text-align: center;
-            line-height: 36px;
+            line-height: 42px;
             cursor: pointer;
-            transition: background-color 0.2s;
-            z-index: 100; /* Pannellum UI보다 위에 배치 */
+            z-index: 100;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
         }
+
         #auto-rotate-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.18);
         }
-        /* 회전 중일 때의 아이콘 (예: 일시정지) */
+
         #auto-rotate-toggle.rotating {
             font-size: 16px;
         }
+
+        /* ================================
+           모바일 화면 대응
+        ================================= */
+        @media (max-width: 768px) {
+            #compass {
+                width: 76px;
+                height: 76px;
+                right: 16px;
+                top: 16px;
+            }
+
+            #compass-ring {
+                width: 60px;
+                height: 60px;
+            }
+
+            #zoom-control {
+                right: 16px;
+                bottom: 24px;
+            }
+
+            #auto-rotate-toggle {
+                right: 16px;
+                bottom: 242px;
+            }
+
+            #view-info {
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<!-- 뷰어가 렌더링될 영역 -->
-<div id="panorama"></div>
+    <!-- 360도 이미지가 보이는 영역 -->
+    <div id="panorama"></div>
 
-<!-- [신규] 자동 회전 토글 버튼 -->
-<div id="auto-rotate-toggle" title="자동 회전">&#x21bb;</div> <!-- 둥근 화살표 아이콘 -->
+    <!-- 나침반 -->
+    <div id="compass">
+        <div id="compass-ring">
+            <div class="direction north">N</div>
+            <div class="direction east">E</div>
+            <div class="direction south">S</div>
+            <div class="direction west">W</div>
+        </div>
+        <div id="compass-needle"></div>
+        <div id="compass-center"></div>
+    </div>
 
-<script>
-    // Pannellum 뷰어 초기화
-    var viewer = pannellum.viewer('panorama', {
-        "type": "equirectangular", // 360도 이미지 타입 지정
-        "panorama": "vr.jpg",      // 사용할 이미지 파일명 지정
-        "autoLoad": true,          // 페이지 로드 시 자동 실행
-        "mouseZoom": true,         // 마우스 스크롤로 확대/축소 허용 (기존 유지)
-        "showControls": true,      // 줌 컨트롤 아이콘 표시 (기존 유지)
-        "compass": false,          // 나침반 UI 숨기기
-        "minPitch": -90,           // 상하 회전 최소 각도
-        "maxPitch": 90             // 상하 회전 최대 각도
-    });
+    <!-- 화면 중앙 위치 안내 -->
+    <div id="center-guide">
+        <div class="guide-line-horizontal"></div>
+        <div class="guide-line-vertical"></div>
+        <div class="guide-circle"></div>
+        <div class="guide-dot"></div>
+    </div>
 
-    // [신규] 자동 회전 토글 기능 구현
-    var autoRotateBtn = document.getElementById('auto-rotate-toggle');
-    autoRotateBtn.addEventListener('click', function() {
-        if (viewer.isAutorotating()) {
-            viewer.stopAutorotate();
-            autoRotateBtn.innerHTML = '&#x21bb;'; // 둥근 화살표 아이콘 (시작)
-            autoRotateBtn.classList.remove('rotating');
-        } else {
-            viewer.startAutorotate(-2); // 반시계 방향으로 회전 시작
-            autoRotateBtn.innerHTML = '||'; // 일시정지 아이콘 (정지)
-            autoRotateBtn.classList.add('rotating');
+    <div id="view-info">현재 방향 확인 중...</div>
+
+    <!-- 자동 회전 버튼 -->
+    <div id="auto-rotate-toggle" title="자동 회전">↻</div>
+
+    <!-- 확대 / 축소 컨트롤 -->
+    <div id="zoom-control">
+        <button class="zoom-btn" id="zoom-in">+</button>
+
+        <div id="zoom-slider-area">
+            <input type="range" id="zoom-slider" min="0" max="100" value="30">
+        </div>
+
+        <button class="zoom-btn" id="zoom-out">−</button>
+    </div>
+
+    <script>
+        /* ================================
+           확대 / 축소 범위 설정
+           숫자가 작을수록 더 확대됩니다.
+        ================================= */
+        var MIN_HFOV = 35;
+        var MAX_HFOV = 120;
+
+        /* ================================
+           Pannellum 뷰어 실행
+        ================================= */
+        var viewer = pannellum.viewer('panorama', {
+            "type": "equirectangular",
+
+            /*
+                여기에 360도 이미지 파일명을 넣습니다.
+                index.html과 같은 폴더에 vr.jpg를 넣으면 됩니다.
+            */
+            "panorama": "vr.jpg",
+
+            "autoLoad": true,
+            "mouseZoom": true,
+
+            /*
+                기본 버튼은 숨기고,
+                직접 만든 확대/축소 버튼을 사용합니다.
+            */
+            "showControls": false,
+
+            "compass": false,
+
+            "hfov": 95,
+            "minHfov": MIN_HFOV,
+            "maxHfov": MAX_HFOV,
+
+            "minPitch": -90,
+            "maxPitch": 90
+        });
+
+        /* ================================
+           HTML 요소 가져오기
+        ================================= */
+        var zoomInBtn = document.getElementById('zoom-in');
+        var zoomOutBtn = document.getElementById('zoom-out');
+        var zoomSlider = document.getElementById('zoom-slider');
+
+        var compassRing = document.getElementById('compass-ring');
+        var viewInfo = document.getElementById('view-info');
+
+        var autoRotateBtn = document.getElementById('auto-rotate-toggle');
+
+        var isRotating = false;
+
+        /* ================================
+           숫자를 최소/최대 범위 안에 넣는 함수
+        ================================= */
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
         }
-    });
-</script>
+
+        /* ================================
+           확대값과 슬라이더값을 서로 연결
+        ================================= */
+        function hfovToSlider(hfov) {
+            return ((MAX_HFOV - hfov) / (MAX_HFOV - MIN_HFOV)) * 100;
+        }
+
+        function sliderToHfov(value) {
+            return MAX_HFOV - (value / 100) * (MAX_HFOV - MIN_HFOV);
+        }
+
+        function updateZoomSlider() {
+            var hfov = viewer.getHfov();
+            zoomSlider.value = hfovToSlider(hfov);
+        }
+
+        /* ================================
+           + 버튼 클릭 시 확대
+        ================================= */
+        zoomInBtn.addEventListener('click', function() {
+            var currentHfov = viewer.getHfov();
+            var newHfov = clamp(currentHfov - 10, MIN_HFOV, MAX_HFOV);
+
+            viewer.setHfov(newHfov);
+            updateZoomSlider();
+        });
+
+        /* ================================
+           - 버튼 클릭 시 축소
+        ================================= */
+        zoomOutBtn.addEventListener('click', function() {
+            var currentHfov = viewer.getHfov();
+            var newHfov = clamp(currentHfov + 10, MIN_HFOV, MAX_HFOV);
+
+            viewer.setHfov(newHfov);
+            updateZoomSlider();
+        });
+
+        /* ================================
+           슬라이더로 확대 / 축소
+        ================================= */
+        zoomSlider.addEventListener('input', function() {
+            var newHfov = sliderToHfov(Number(zoomSlider.value));
+            viewer.setHfov(newHfov);
+        });
+
+        /* ================================
+           각도에 따라 방향 이름 표시
+        ================================= */
+        function getDirectionName(yaw) {
+            var angle = yaw;
+
+            if (angle < 0) {
+                angle = angle + 360;
+            }
+
+            if (angle >= 337.5 || angle < 22.5) {
+                return "북쪽";
+            } else if (angle >= 22.5 && angle < 67.5) {
+                return "북동쪽";
+            } else if (angle >= 67.5 && angle < 112.5) {
+                return "동쪽";
+            } else if (angle >= 112.5 && angle < 157.5) {
+                return "남동쪽";
+            } else if (angle >= 157.5 && angle < 202.5) {
+                return "남쪽";
+            } else if (angle >= 202.5 && angle < 247.5) {
+                return "남서쪽";
+            } else if (angle >= 247.5 && angle < 292.5) {
+                return "서쪽";
+            } else {
+                return "북서쪽";
+            }
+        }
+
+        /* ================================
+           나침반과 중앙 안내 표시 업데이트
+        ================================= */
+        function updateViewerUI() {
+            var yaw = viewer.getYaw();
+            var pitch = viewer.getPitch();
+
+            /*
+                화면을 돌릴 때 나침반이 같이 회전합니다.
+            */
+            compassRing.style.transform =
+                'translate(-50%, -50%) rotate(' + (-yaw) + 'deg)';
+
+            var yawText = Math.round(yaw);
+            var pitchText = Math.round(pitch);
+            var directionName = getDirectionName(yaw);
+
+            viewInfo.innerHTML =
+                '현재 방향: ' + directionName + ' ' + yawText + '° / 기울기 ' + pitchText + '°';
+
+            updateZoomSlider();
+
+            requestAnimationFrame(updateViewerUI);
+        }
+
+        updateViewerUI();
+
+        /* ================================
+           자동 회전 시작 / 정지 함수
+           Pannellum 버전에 따라 함수명이 다를 수 있어
+           둘 다 대응되게 작성했습니다.
+        ================================= */
+        function startRotation() {
+            if (typeof viewer.startAutoRotate === 'function') {
+                viewer.startAutoRotate(-2);
+            } else if (typeof viewer.startAutorotate === 'function') {
+                viewer.startAutorotate(-2);
+            }
+        }
+
+        function stopRotation() {
+            if (typeof viewer.stopAutoRotate === 'function') {
+                viewer.stopAutoRotate();
+            } else if (typeof viewer.stopAutorotate === 'function') {
+                viewer.stopAutorotate();
+            }
+        }
+
+        /* ================================
+           자동 회전 버튼 클릭
+        ================================= */
+        autoRotateBtn.addEventListener('click', function() {
+            if (isRotating) {
+                stopRotation();
+                isRotating = false;
+
+                autoRotateBtn.innerHTML = '↻';
+                autoRotateBtn.classList.remove('rotating');
+            } else {
+                startRotation();
+                isRotating = true;
+
+                autoRotateBtn.innerHTML = 'Ⅱ';
+                autoRotateBtn.classList.add('rotating');
+            }
+        });
+    </script>
 
 </body>
 </html>
